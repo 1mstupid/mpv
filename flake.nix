@@ -21,6 +21,12 @@
             inherit system;
           };
 
+          /*
+            Build the complete mpv config directory.
+
+            This preserves the exact directory structure that your
+            existing mpv configuration expects.
+          */
           mpvConfig = pkgs.stdenvNoCC.mkDerivation {
             pname = "mpv-config";
             version = "unstable";
@@ -42,29 +48,34 @@
             '';
           };
 
+          /*
+            A wrapper-specific mpv.conf.
+
+            The normal mpv.conf remains untouched. This file simply
+            includes it and tells mpv where the Nix-provided scripts
+            and modules live.
+          */
+          wrapperConfig = pkgs.writeText "mpv-wrapper.conf" ''
+            include=${mpvConfig}/mpv.conf
+
+            # Nix-provided script locations
+            script=${mpvConfig}/scripts/uosc/main.lua
+            script=${mpvConfig}/scripts/uosc_history.lua
+            script=${mpvConfig}/scripts/uosc_danmaku/main.lua
+            script=${mpvConfig}/scripts/uosc_webdav.lua
+          '';
+
           wrappedMpv =
             wrappers.wrapperModules.mpv.apply {
               inherit pkgs;
 
-              # Base mpv configuration.
-              "mpv.conf".path = "${mpvConfig}/mpv.conf";
+              "mpv.conf".path = wrapperConfig;
               "input.conf".path = "${mpvConfig}/input.conf";
 
-              # Executables available to mpv and its scripts.
               extraPackages = [
                 pkgs.yt-dlp
                 pkgs.ffmpeg
               ];
-
-              # Add the rest of your config to the wrapper.
-              extend = {
-                postBuild = ''
-                  cp -r ${mpvConfig}/scripts "$out/share/mpv/scripts"
-                  cp -r ${mpvConfig}/script-opts "$out/share/mpv/script-opts"
-                  cp -r ${mpvConfig}/script-modules "$out/share/mpv/script-modules"
-                  cp -r ${mpvConfig}/fonts "$out/share/mpv/fonts"
-                '';
-              };
             };
 
         in
