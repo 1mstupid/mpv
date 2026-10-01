@@ -3,10 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    wrappers.url = "github:Lassulus/wrappers";
   };
 
-  outputs = { self, nixpkgs, wrappers }:
+  outputs = { self, nixpkgs }:
     let
       systems = [
         "x86_64-linux"
@@ -22,10 +21,15 @@
           };
 
           /*
-            Build the complete mpv config directory.
+            Build the complete mpv configuration directory.
 
-            This preserves the exact directory structure that your
-            existing mpv configuration expects.
+            This intentionally excludes runtime state such as:
+              cache/
+              files/
+              watch_later/
+              mpv.log
+
+            Those should remain in the user's writable XDG directories.
           */
           mpvConfig = pkgs.stdenvNoCC.mkDerivation {
             pname = "mpv-config";
@@ -48,38 +52,29 @@
             '';
           };
 
-          /*
-            A wrapper-specific mpv.conf.
-
-            The normal mpv.conf remains untouched. This file simply
-            includes it and tells mpv where the Nix-provided scripts
-            and modules live.
-          */
-          wrapperConfig = pkgs.writeText "mpv-wrapper.conf" ''
-            include=${mpvConfig}/mpv.conf
-
-            # Nix-provided script locations
-            script=${mpvConfig}/scripts/uosc/main.lua
-            script=${mpvConfig}/scripts/uosc_history.lua
-            script=${mpvConfig}/scripts/uosc_danmaku/main.lua
-            script=${mpvConfig}/scripts/uosc_webdav.lua
-          '';
-
-          wrappedMpv =
-            wrappers.wrapperModules.mpv.apply {
-              inherit pkgs;
-
-              "mpv.conf".path = wrapperConfig;
-              "input.conf".path = "${mpvConfig}/input.conf";
-
-              extraPackages = [
-                pkgs.yt-dlp
-                pkgs.ffmpeg
-              ];
-            };
-
         in
-          wrappedMpv.wrapper;
+          pkgs.symlinkJoin {
+            name = "mpv-with-config";
+
+            paths = [
+              pkgs.mpv
+            ];
+
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+            ];
+
+            postBuild = ''
+              wrapProgram $out/bin/mpv \
+                --add-flags "--config-dir=${mpvConfig}" \
+                --prefix PATH : ${
+                  pkgs.lib.makeBinPath [
+                    pkgs.yt-dlp
+                    pkgs.ffmpeg
+                  ]
+                }
+            '';
+          };
 
     in
     {
