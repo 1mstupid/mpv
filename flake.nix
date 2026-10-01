@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
     wrappers.url = "github:Lassulus/wrappers";
   };
 
@@ -22,108 +21,54 @@
             inherit system;
           };
 
-          w = wrappers.wrapperModules.mpv.apply {
-            inherit pkgs;
+          mpvConfig = pkgs.stdenvNoCC.mkDerivation {
+            pname = "mpv-config";
+            version = "unstable";
 
-            /*
-              Everything in your config that mpv should see as an
-              ordinary config file goes here.
-            */
+            src = ./.;
 
-            "mpv.conf".source = ./mpv.conf;
-            "input.conf".source = ./input.conf;
+            dontBuild = true;
 
-            /*
-              mpv scripts.
+            installPhase = ''
+              mkdir -p $out
 
-              These are copied into the wrapper's script directory
-              and loaded by mpv.
-            */
-            scripts = [
-              ./scripts/chapterskip.lua
-              ./scripts/clock.lua
-              ./scripts/cut_sub.lua
-              ./scripts/dir_subs.lua
-              ./scripts/embedded-lyrics.lua
-              ./scripts/extract_fonts.lua
-              ./scripts/music-reset.lua
-              ./scripts/playlistmanager.lua
-              ./scripts/skip_sponsorblock.lua
-              ./scripts/speed_manager.lua
-              ./scripts/sub_export.lua
-              ./scripts/sub-fastwhisper.lua
-              ./scripts/uosc_history.lua
-              ./scripts/uosc_webdav.lua
-              ./scripts/winisland.lua
+              cp mpv.conf $out/mpv.conf
+              cp input.conf $out/input.conf
 
-              ./scripts/uosc/main.lua
-              ./scripts/uosc_danmaku/main.lua
-              ./scripts/uosc_history/main.lua
-              ./scripts/uosc_webdav/main.lua
-            ];
+              cp -r scripts $out/scripts
+              cp -r script-opts $out/script-opts
+              cp -r script-modules $out/script-modules
+              cp -r fonts $out/fonts
+            '';
+          };
 
-            /*
-              Extra files used by the scripts.
+          wrappedMpv =
+            wrappers.wrapperModules.mpv.apply {
+              inherit pkgs;
 
-              These are installed into the mpv config directory so
-              paths such as:
-                  ~~ /script-opts/foo.conf
-                  ~~ /script-modules/...
-              continue to work.
-            */
-            extraFiles = {
-              "script-opts" = ./script-opts;
-              "script-modules" = ./script-modules;
-              "fonts" = ./fonts;
+              # Base mpv configuration.
+              "mpv.conf".source = "${mpvConfig}/mpv.conf";
+              "input.conf".source = "${mpvConfig}/input.conf";
 
-              /*
-                uosc has data files which are referenced relative to
-                its own script directory.
-              */
-              "scripts/uosc/char-conv" = ./scripts/uosc/char-conv;
-              "scripts/uosc/intl" = ./scripts/uosc/intl;
-              "scripts/uosc/elements" = ./scripts/uosc/elements;
-              "scripts/uosc/lib" = ./scripts/uosc/lib;
+              # Executables available to mpv and its scripts.
+              extraPackages = [
+                pkgs.yt-dlp
+                pkgs.ffmpeg
+              ];
 
-              "scripts/uosc_danmaku/apis" = ./scripts/uosc_danmaku/apis;
-              "scripts/uosc_danmaku/dicts" = ./scripts/uosc_danmaku/dicts;
-              "scripts/uosc_danmaku/modules" = ./scripts/uosc_danmaku/modules;
-
-              "scripts/uosc_history/i18n" = ./scripts/uosc_history/i18n;
-              "scripts/uosc_history/menus" = ./scripts/uosc_history/menus;
-
-              "scripts/uosc_webdav/modules" = ./scripts/uosc_webdav/modules;
-
-              /*
-                Optional JSON/state files that appear to be part of
-                the uosc history setup.
-
-                Remove these if they are meant to be machine-local
-                state rather than shipped configuration.
-              */
-              "uosc_history_bookmarks.json" = ./uosc_history_bookmarks.json;
-              "uosc_history.json" = ./uosc_history.json;
+              # Add the rest of your config to the wrapper.
+              extend = {
+                postBuild = ''
+                  cp -r ${mpvConfig}/scripts "$out/share/mpv/scripts"
+                  cp -r ${mpvConfig}/script-opts "$out/share/mpv/script-opts"
+                  cp -r ${mpvConfig}/script-modules "$out/share/mpv/script-modules"
+                  cp -r ${mpvConfig}/fonts "$out/share/mpv/fonts"
+                '';
+              };
             };
 
-            /*
-              Runtime dependencies.
-
-              yt-dlp is what mpv's ytdl_hook invokes for URLs such
-              as YouTube/Twitch/etc.
-            */
-            runtimePackages = [
-              pkgs.yt-dlp
-              pkgs.ffmpeg
-
-              /*
-                Useful if any of your scripts/download workflows use it.
-                Remove if unnecessary.
-              */
-              pkgs.aria2
-            ];
-          };
         in
-          w.wrapper;
+          wrappedMpv.wrapper;
 
     in
     {
