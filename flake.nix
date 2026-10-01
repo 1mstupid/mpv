@@ -47,8 +47,8 @@
               inherit pkgs;
 
               # Base mpv configuration.
-              "mpv.conf".source = "${mpvConfig}/mpv.conf";
-              "input.conf".source = "${mpvConfig}/input.conf";
+              "mpv.conf".path = "${mpvConfig}/mpv.conf";
+              "input.conf".path = "${mpvConfig}/input.conf";
 
               # Executables available to mpv and its scripts.
               extraPackages = [
