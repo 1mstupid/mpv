@@ -20,17 +20,6 @@
             inherit system;
           };
 
-          /*
-            Build the complete mpv configuration directory.
-
-            This intentionally excludes runtime state such as:
-              cache/
-              files/
-              watch_later/
-              mpv.log
-
-            Those should remain in the user's writable XDG directories.
-          */
           mpvConfig = pkgs.stdenvNoCC.mkDerivation {
             pname = "mpv-config";
             version = "unstable";
