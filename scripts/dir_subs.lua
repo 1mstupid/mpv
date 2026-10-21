@@ -7,7 +7,7 @@ local options = require 'mp.options'
 local o = {
     -- 完整保存路径 (支持 ~~/, ~/, 绝对路径)
     -- 用户可以在 script-opts/dir_subs.conf 中重写此项
-    state_path = "~~/files/dir_subs.json",
+    state_path = "~/.local/state/mpv/files/dir_subs.json",
 
     save_delay = 0.5, -- 防抖延迟（秒）
     debug = false,

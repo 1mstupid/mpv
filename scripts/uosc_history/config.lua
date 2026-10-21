@@ -20,11 +20,9 @@ local defaults = {
     -- 搜索结果按播放时间排序
     search_sorting = false,
 
-    -- 日志文件路径（~~/ = 用户 home 目录）
-    data_path = '~~/uosc_history.json',
+    data_path = '~/.local/state/mpv/uosc_history.json',
 
-    -- 收藏夹文件路径（独立于历史记录，方便手动预设/编辑）
-    bookmark_data_path = '~~/uosc_history_bookmarks.json',
+    bookmark_data_path = '~/.local/state/mpv/uosc_history_bookmarks.json',
 }
 
 local M = {}
